@@ -28,9 +28,7 @@ jobs:
         file: ./build/Dockerfile
         pull: always
         push: true
-        tags: |
-          "docker.io/kalenpeterson/transmission-cleanup:${{ github.run_id }}"
-          "docker.io/kalenpeterson/transmission-cleanup:latest"
+        tags: "docker.io/kalenpeterson/transmission-cleanup:${{ github.run_id }},docker.io/kalenpeterson/transmission-cleanup:latest"
 
 
 
