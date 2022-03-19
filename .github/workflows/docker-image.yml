@@ -1,0 +1,36 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Docker Login
+      uses: docker/login-action@v1.14.1
+      with:
+        registry: docker.io
+        username: ${{ secrest.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+        logout: true
+        
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v2.10.0
+      with:
+        file: ./build/Dockerfile
+        pull: always
+        push: true
+        tags: |
+          "docker.io/kalenpeterson/transmission-cleanup:${{ github.run_id }}"
+          "docker.io/kalenpeterson/transmission-cleanup:latest"
+
+
+
