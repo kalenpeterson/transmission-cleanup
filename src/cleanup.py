@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cleanup-search-strings",
         nargs='*',
-        default=environ.get("CLEANUP_SEARCH_STRING", []),
+        default=environ.get("CLEANUP_SEARCH_STRINGS", []),
         help="One or more regex strings to filter torrents")
  
 
