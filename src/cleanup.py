@@ -8,6 +8,7 @@ __author__ = "Kalen Peterson"
 __version__ = "0.1.0"
 __license__ = "MIT"
 
+import json
 from os import environ
 import argparse
 from logzero import logger
@@ -54,26 +55,47 @@ def deleteTorrents(tc, torrents):
         tc.remove_torrent(torrent.id, delete_data=True, timeout=None)
         time.sleep(10) # Wait a few seconds so we don't hammer transmission with delete requests
 
+def parseSearchStrings(jsonSearchStrings):
+
+    if jsonSearchStrings is not None:
+        try:
+            searchStrings = json.loads(jsonSearchStrings)
+        except Exception as e:
+            logger.error('Failed to convert JSON string to Python list')
+            raise Exception('Failed to convert JSON string to Python list')
+
+        if not isinstance(searchStrings, list):
+            raise ValueError('JSON search string is not a list')
+    else:
+        raise ValueError('JSON search string is empty')
+
+    return searchStrings
 
 def main(args):
     """ Main entry point of the app """
     logger.info("Starting transmission torrent cleanup")
     logger.debug(args)
+
+    # Parse the Search Options
+    searchStrings = parseSearchStrings(args.cleanup_search_strings_json)
     
     # Build the Transmission Client
     tc = Client(
-        protocol='https',
+        protocol=args.transmission_protocol,
         host=args.transmission_host,
         port=args.transmission_port)
 
     # Find old Torrents
     torrents = findTorrents(
         tc,
-        args.cleanup_search_strings,
+        searchStrings,
         args.cleanup_prev_days)
 
     # Delete the Torrents
-    deleteTorrents(tc, torrents)
+    if args.dry_run:
+        logger.info('dry-run requested, torrents will not be deleted')
+    else:
+        deleteTorrents(tc, torrents)
 
     logger.info("Finished transmission torrent cleanup")
         
@@ -85,15 +107,20 @@ if __name__ == "__main__":
     # Transmission Args
     parser.add_argument(
         "--transmission-host",
-        default=environ.get("TRANSMISSION_HOST", ""),
+        default=environ.get("TRANSMISSION_HOST", None),
+        type=str,
+        required=True,
         help="IP or hostname of the transmission host")
     parser.add_argument(
         "--transmission-port",
         type=int,
+        required=False,
         default=environ.get("TRANSMISSION_PORT", 9091),
         help="Transmission RPC port number (default: 9091)")
     parser.add_argument(
         "--transmission-protocol",
+        type=str,
+        required=False,
         default=environ.get("TRANSMISSION_PROTOCOL", "http"),
         help="Transmission RPC protocol. Can be http or https (default: http)")
 
@@ -102,13 +129,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cleanup-prev-days",
         type=int,
+        required=False,
         default=environ.get("CLEANUP_PREV_DAYS", 90),
         help="Number of days prior to NOW to start deleting torrents (default: 90)")
     parser.add_argument(
-        "--cleanup-search-strings",
-        nargs='*',
-        default=environ.get("CLEANUP_SEARCH_STRINGS", []),
-        help="One or more regex strings to filter torrents")
+        "--cleanup-search-strings-json",
+        type=str,
+        required=True,
+        default=environ.get("CLEANUP_SEARCH_STRINGS_JSON", None),
+        help="One or more regex strings to filter torrents as a JSON string")
+    parser.add_argument(
+        "--dry-run",
+        required=False,
+        action='store_true',
+        default=environ.get("DRY_RUN", False),
+        help="Find torrents eligible for deletion, but do not remove them (default: False)")
  
 
     # Specify output of "--version"
